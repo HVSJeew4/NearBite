@@ -34,4 +34,37 @@ public class ListingsController : ControllerBase
 
         return Ok(listing);
     }
+
+    [HttpPost]
+    public ActionResult<ListingDto> Create(CreateListingDto dto)
+    {
+        var created = _service.Create(dto);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [HttpPut("{id:int}")]
+    public IActionResult Update(int id, UpdateListingDto dto)
+    {
+        var updated = _service.Update(id, dto);
+
+        if (updated == null)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}")]
+    public IActionResult Delete(int id)
+    {
+        var deleted = _service.Delete(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }
