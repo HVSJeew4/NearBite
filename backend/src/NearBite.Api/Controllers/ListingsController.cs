@@ -67,4 +67,34 @@ public class ListingsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("{listingId:int}/menu-items")]
+    public ActionResult<IEnumerable<MenuItemDto>> GetMenuItemsForListing(int listingId)
+    {
+        var items = _service.GetMenuItemsForListing(listingId);
+
+        if (items == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(items);
+    }
+
+    [HttpPost("{listingId:int}/menu-items")]
+    public ActionResult<MenuItemDto> CreateMenuItem(int listingId, CreateMenuItemDto dto)
+    {
+        var created = _service.CreateMenuItem(listingId, dto);
+
+        if (created == null)
+        {
+            return NotFound();
+        }
+
+        return CreatedAtAction(
+            nameof(MenuItemsController.GetById),
+            "MenuItems",
+            new { id = created.Id },
+            created);
+    }
 }

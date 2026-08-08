@@ -9,4 +9,11 @@ public interface IListingService
     ListingDto Create(CreateListingDto dto);
     ListingDto? Update(int id, UpdateListingDto dto);
     bool Delete(int id);
+
+    // Menu items
+    IEnumerable<MenuItemDto>? GetMenuItemsForListing(int listingId);
+    MenuItemDto? GetMenuItemById(int menuItemId);
+    MenuItemDto? CreateMenuItem(int listingId, CreateMenuItemDto dto);
+    MenuItemDto? UpdateMenuItem(int menuItemId, UpdateMenuItemDto dto);
+    bool DeleteMenuItem(int menuItemId);
 }
