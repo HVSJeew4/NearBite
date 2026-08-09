@@ -54,8 +54,9 @@ public class InMemoryListingRepository : IListingRepository
     }
 
     // -----------------------------
-    // Listing methods 
+    // Listing methods
     // -----------------------------
+
     public IEnumerable<Listing> GetAll()
     {
         return _listings;
@@ -107,8 +108,9 @@ public class InMemoryListingRepository : IListingRepository
     }
 
     // -----------------------------
-    // Menu item methods 
+    // Menu item methods
     // -----------------------------
+
     public IEnumerable<MenuItem> GetMenuItemsForListing(int listingId)
     {
         var result = new List<MenuItem>();

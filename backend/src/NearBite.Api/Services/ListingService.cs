@@ -13,10 +13,82 @@ public class ListingService : IListingService
         _repository = repository;
     }
 
+    // -----------------------------
+    // Listing methods
+    // -----------------------------
+
     public IEnumerable<ListingDto> GetAll()
     {
         var listings = _repository.GetAll();
         return listings.Select(MapToDto);
+    }
+
+    public IEnumerable<ListingDto> GetAll(ListingFilterDto filter)
+    {
+        if (filter.SortBy == "distance" && (filter.UserLat == null || filter.UserLng == null))
+        {
+            throw new ArgumentException("sortBy=distance requires both userLat and userLng.");
+        }
+
+        var listings = _repository.GetAll();
+        var results = new List<Listing>();
+
+        foreach (var listing in listings)
+        {
+            if (filter.Cuisine != null &&
+                !listing.Cuisine.Equals(filter.Cuisine, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (filter.MaxPrice != null && listing.PriceRange > filter.MaxPrice.Value)
+            {
+                continue;
+            }
+
+            if (filter.IsVeg != null && listing.IsVeg != filter.IsVeg.Value)
+            {
+                continue;
+            }
+
+            if (filter.Search != null &&
+                !listing.Name.Contains(filter.Search, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            results.Add(listing);
+        }
+
+        switch (filter.SortBy)
+        {
+            case "price":
+                results.Sort((a, b) => a.PriceRange.CompareTo(b.PriceRange));
+                break;
+
+            case "distance":
+                results.Sort((a, b) =>
+                {
+                    var distA = CalculateDistance(filter.UserLat!.Value, filter.UserLng!.Value, a.Latitude, a.Longitude);
+                    var distB = CalculateDistance(filter.UserLat!.Value, filter.UserLng!.Value, b.Latitude, b.Longitude);
+                    return distA.CompareTo(distB);
+                });
+                break;
+
+            case "rating":
+                throw new ArgumentException("sortBy=rating is not supported until reviews are added in Sprint 5.");
+
+            case null:
+            case "":
+            case "name":
+                results.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+                break;
+
+            default:
+                throw new ArgumentException($"Unknown sortBy value: {filter.SortBy}");
+        }
+
+        return results.Select(MapToDto);
     }
 
     public ListingDto? GetById(int id)
@@ -79,35 +151,18 @@ public class ListingService : IListingService
         return true;
     }
 
-    private static ListingDto MapToDto(Listing listing)
-    {
-        return new ListingDto
-        {
-            Id = listing.Id,
-            Name = listing.Name,
-            Description = listing.Description,
-            Cuisine = listing.Cuisine,
-            PriceRange = listing.PriceRange,
-            City = listing.City,
-            LiveStatus = listing.LiveStatus,
-            Latitude = listing.Latitude,
-            Longitude = listing.Longitude,
-            IsVeg = listing.IsVeg
-        };
-    }
-
-
+    // -----------------------------
+    // Menu item methods
+    // -----------------------------
 
     public IEnumerable<MenuItemDto>? GetMenuItemsForListing(int listingId)
     {
-        // First: does the parent listing exist?
         var listing = _repository.GetById(listingId);
         if (listing == null)
         {
             return null;
         }
 
-        // Yes — fetch and map its menu items.
         var items = _repository.GetMenuItemsForListing(listingId);
         return items.Select(MapMenuItemToDto);
     }
@@ -120,7 +175,6 @@ public class ListingService : IListingService
 
     public MenuItemDto? CreateMenuItem(int listingId, CreateMenuItemDto dto)
     {
-        // Cross-entity validation: parent listing must exist.
         var listing = _repository.GetById(listingId);
         if (listing == null)
         {
@@ -172,8 +226,26 @@ public class ListingService : IListingService
     }
 
     // -----------------------------
-    // Menu item mapping helper
+    // Mapping helpers
     // -----------------------------
+
+    private static ListingDto MapToDto(Listing listing)
+    {
+        return new ListingDto
+        {
+            Id = listing.Id,
+            Name = listing.Name,
+            Description = listing.Description,
+            Cuisine = listing.Cuisine,
+            PriceRange = listing.PriceRange,
+            City = listing.City,
+            LiveStatus = listing.LiveStatus,
+            Latitude = listing.Latitude,
+            Longitude = listing.Longitude,
+            IsVeg = listing.IsVeg
+        };
+    }
+
     private static MenuItemDto MapMenuItemToDto(MenuItem menuItem)
     {
         return new MenuItemDto
@@ -185,5 +257,30 @@ public class ListingService : IListingService
             IsVeg = menuItem.IsVeg,
             PhotoUrl = menuItem.PhotoUrl
         };
+    }
+
+    // -----------------------------
+    // Distance calculation (Haversine)
+    // -----------------------------
+
+    private static double CalculateDistance(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double earthRadiusKm = 6371.0;
+
+        var dLat = ToRadians(lat2 - lat1);
+        var dLng = ToRadians(lng2 - lng1);
+
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+        return earthRadiusKm * c;
+    }
+
+    private static double ToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180.0;
     }
 }

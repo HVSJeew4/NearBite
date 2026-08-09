@@ -16,10 +16,17 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ListingDto>> GetAll()
+    public ActionResult<IEnumerable<ListingDto>> GetAll([FromQuery] ListingFilterDto filter)
     {
-        var listings = _service.GetAll();
-        return Ok(listings);
+        try
+        {
+            var listings = _service.GetAll(filter);
+            return Ok(listings);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpGet("{id:int}")]
@@ -67,6 +74,10 @@ public class ListingsController : ControllerBase
 
         return NoContent();
     }
+
+    // -----------------------------
+    // Nested menu-item routes
+    // -----------------------------
 
     [HttpGet("{listingId:int}/menu-items")]
     public ActionResult<IEnumerable<MenuItemDto>> GetMenuItemsForListing(int listingId)

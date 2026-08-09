@@ -4,7 +4,9 @@ namespace NearBite.Api.Services;
 
 public interface IListingService
 {
+    // Listings
     IEnumerable<ListingDto> GetAll();
+    IEnumerable<ListingDto> GetAll(ListingFilterDto filter);
     ListingDto? GetById(int id);
     ListingDto Create(CreateListingDto dto);
     ListingDto? Update(int id, UpdateListingDto dto);
