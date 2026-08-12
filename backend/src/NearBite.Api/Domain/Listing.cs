@@ -1,4 +1,6 @@
-﻿namespace NearBite.Api.Domain;
+﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+
+namespace NearBite.Api.Domain;
 
 public class Listing
 {
@@ -14,4 +16,7 @@ public class Listing
     public bool IsVeg { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Navigation property — a Listing has many MenuItems
+    public ICollection<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
 }

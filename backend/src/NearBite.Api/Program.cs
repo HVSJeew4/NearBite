@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using NearBite.Api.Data;
 using NearBite.Api.Repositories;
 using NearBite.Api.Services;
 
@@ -7,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register application services (DI)
 builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();

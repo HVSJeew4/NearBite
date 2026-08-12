@@ -10,4 +10,7 @@ public class MenuItem
     public string? PhotoUrl { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Navigation property — a MenuItem belongs to one Listing
+    public Listing? Listing { get; set; }
 }
