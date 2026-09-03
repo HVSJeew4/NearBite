@@ -1,4 +1,5 @@
 ﻿using NearBite.Api.Domain;
+using NearBite.Api.Domain.Enums;
 using NearBite.Api.Dtos;
 
 namespace NearBite.Api.Repositories;
@@ -15,11 +16,11 @@ public class InMemoryListingRepository : IListingRepository
         // Same seed data as before — keeping the constructor for tests in Sprint 8
         _listings = new List<Listing>
         {
-            new Listing { Id = 1, Name = "Fort Cafe",        Description = "Cozy cafe near the beach",   Cuisine = "Sri Lankan", PriceRange = 2, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2094, Longitude = 79.8358, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Listing { Id = 2, Name = "Green Leaf Kottu", Description = "Best kottu in town",         Cuisine = "Sri Lankan", PriceRange = 1, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2110, Longitude = 79.8380, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Listing { Id = 3, Name = "Sunset Hoppers",   Description = "Traditional hoppers spot",   Cuisine = "Sri Lankan", PriceRange = 1, City = "Negombo", LiveStatus = "Closed", Latitude = 7.2050, Longitude = 79.8400, IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Listing { Id = 4, Name = "The Curry House",  Description = "Rice & curry, home style",   Cuisine = "Sri Lankan", PriceRange = 2, City = "Negombo", LiveStatus = "Busy",   Latitude = 7.2080, Longitude = 79.8410, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-            new Listing { Id = 5, Name = "Bella Italia",     Description = "Wood-fired pizza",           Cuisine = "Italian",    PriceRange = 3, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2130, Longitude = 79.8340, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+            new Listing { Id = 1, Name = "Fort Cafe",        Description = "Cozy cafe near the beach",   Cuisine = "Sri Lankan", PriceRange = 2, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2094, Longitude = 79.8358, IsVeg = false, SubmissionStatus = SubmissionStatus.Approved, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Listing { Id = 2, Name = "Green Leaf Kottu", Description = "Best kottu in town",         Cuisine = "Sri Lankan", PriceRange = 1, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2110, Longitude = 79.8380, IsVeg = false, SubmissionStatus = SubmissionStatus.Approved, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Listing { Id = 3, Name = "Sunset Hoppers",   Description = "Traditional hoppers spot",   Cuisine = "Sri Lankan", PriceRange = 1, City = "Negombo", LiveStatus = "Closed", Latitude = 7.2050, Longitude = 79.8400, IsVeg = true,  SubmissionStatus = SubmissionStatus.Approved, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Listing { Id = 4, Name = "The Curry House",  Description = "Rice & curry, home style",   Cuisine = "Sri Lankan", PriceRange = 2, City = "Negombo", LiveStatus = "Busy",   Latitude = 7.2080, Longitude = 79.8410, IsVeg = false, SubmissionStatus = SubmissionStatus.Approved, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+            new Listing { Id = 5, Name = "Bella Italia",     Description = "Wood-fired pizza",           Cuisine = "Italian",    PriceRange = 3, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2130, Longitude = 79.8340, IsVeg = false, SubmissionStatus = SubmissionStatus.Approved, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
         };
 
         _menuItems = new List<MenuItem>
@@ -90,6 +91,13 @@ public class InMemoryListingRepository : IListingRepository
         listing.Id = _nextListingId++;
         listing.CreatedAt = DateTime.UtcNow;
         listing.UpdatedAt = DateTime.UtcNow;
+
+        // Sprint 5: new listings default to Pending per the trust loop.
+        if (listing.SubmissionStatus == default)
+        {
+            listing.SubmissionStatus = SubmissionStatus.Pending;
+        }
+
         _listings.Add(listing);
         return Task.CompletedTask;
     }
@@ -112,6 +120,9 @@ public class InMemoryListingRepository : IListingRepository
         existing.Longitude = listing.Longitude;
         existing.IsVeg = listing.IsVeg;
         existing.UpdatedAt = DateTime.UtcNow;
+        // Note: SubmissionStatus, RejectionReason, OwnerId are NOT copied here —
+        // they're managed by dedicated admin methods in Steps 3 and 5, not by
+        // ordinary owner edits.
 
         return Task.CompletedTask;
     }
