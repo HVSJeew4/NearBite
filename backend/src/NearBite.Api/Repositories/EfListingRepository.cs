@@ -18,29 +18,66 @@ public class EfListingRepository : IListingRepository
     // Listing methods
     // -----------------------------
 
-    public IEnumerable<Listing> GetAll()
+    public async Task<IEnumerable<Listing>> GetAllAsync()
     {
-        return _context.Listings.ToList();
+        return await _context.Listings.ToListAsync();
     }
 
-    public Listing? GetById(int id)
+    public async Task<IEnumerable<Listing>> GetAllAsync(ListingFilterDto filter)
     {
-        return _context.Listings
+        var query = _context.Listings.AsQueryable();
+
+        if (filter.Cuisine != null)
+        {
+            var cuisine = filter.Cuisine.ToLower();
+            query = query.Where(l => l.Cuisine.ToLower() == cuisine);
+        }
+
+        if (filter.MaxPrice != null)
+        {
+            query = query.Where(l => l.PriceRange <= filter.MaxPrice.Value);
+        }
+
+        if (filter.IsVeg != null)
+        {
+            query = query.Where(l => l.IsVeg == filter.IsVeg.Value);
+        }
+
+        if (filter.Search != null)
+        {
+            var search = filter.Search.ToLower();
+            query = query.Where(l => l.Name.ToLower().Contains(search));
+        }
+
+        // Sorting
+        query = filter.SortBy switch
+        {
+            "price" => query.OrderBy(l => l.PriceRange),
+            "name" or null or "" => query.OrderBy(l => l.Name),
+            _ => query
+        };
+
+        return await query.ToListAsync();
+    }
+
+    public async Task<Listing?> GetByIdAsync(int id)
+    {
+        return await _context.Listings
             .Include(l => l.MenuItems)
-            .FirstOrDefault(l => l.Id == id);
+            .FirstOrDefaultAsync(l => l.Id == id);
     }
 
-    public void Add(Listing listing)
+    public async Task AddAsync(Listing listing)
     {
         listing.CreatedAt = DateTime.UtcNow;
         listing.UpdatedAt = DateTime.UtcNow;
         _context.Listings.Add(listing);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public void Update(Listing listing)
+    public async Task UpdateAsync(Listing listing)
     {
-        var existing = _context.Listings.FirstOrDefault(l => l.Id == listing.Id);
+        var existing = await _context.Listings.FirstOrDefaultAsync(l => l.Id == listing.Id);
         if (existing == null)
         {
             return;
@@ -57,49 +94,53 @@ public class EfListingRepository : IListingRepository
         existing.IsVeg = listing.IsVeg;
         existing.UpdatedAt = DateTime.UtcNow;
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
-        var existing = _context.Listings.FirstOrDefault(l => l.Id == id);
+        var existing = await _context.Listings.FirstOrDefaultAsync(l => l.Id == id);
         if (existing == null)
         {
             return;
         }
 
         _context.Listings.Remove(existing);
-        _context.SaveChanges();
-        // No manual RemoveAll for menu items — the DB's ON DELETE CASCADE handles it.
+        await _context.SaveChangesAsync();
     }
 
     // -----------------------------
     // Menu item methods
     // -----------------------------
 
-    public IEnumerable<MenuItem> GetMenuItemsForListing(int listingId)
+    public async Task<IEnumerable<MenuItem>> GetMenuItemsForListingAsync(int listingId)
     {
-        return _context.MenuItems
+        return await _context.MenuItems
             .Where(m => m.ListingId == listingId)
-            .ToList();
+            .ToListAsync();
     }
 
-    public MenuItem? GetMenuItemById(int menuItemId)
+    public async Task<Listing?> GetListingForMenuItemAsync(int listingId)
     {
-        return _context.MenuItems.FirstOrDefault(m => m.Id == menuItemId);
+        return await _context.Listings.FirstOrDefaultAsync(l => l.Id == listingId);
     }
 
-    public void AddMenuItem(MenuItem menuItem)
+    public async Task<MenuItem?> GetMenuItemByIdAsync(int menuItemId)
+    {
+        return await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == menuItemId);
+    }
+
+    public async Task AddMenuItemAsync(MenuItem menuItem)
     {
         menuItem.CreatedAt = DateTime.UtcNow;
         menuItem.UpdatedAt = DateTime.UtcNow;
         _context.MenuItems.Add(menuItem);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public void UpdateMenuItem(MenuItem menuItem)
+    public async Task UpdateMenuItemAsync(MenuItem menuItem)
     {
-        var existing = _context.MenuItems.FirstOrDefault(m => m.Id == menuItem.Id);
+        var existing = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == menuItem.Id);
         if (existing == null)
         {
             return;
@@ -111,18 +152,18 @@ public class EfListingRepository : IListingRepository
         existing.PhotoUrl = menuItem.PhotoUrl;
         existing.UpdatedAt = DateTime.UtcNow;
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 
-    public void DeleteMenuItem(int menuItemId)
+    public async Task DeleteMenuItemAsync(int menuItemId)
     {
-        var existing = _context.MenuItems.FirstOrDefault(m => m.Id == menuItemId);
+        var existing = await _context.MenuItems.FirstOrDefaultAsync(m => m.Id == menuItemId);
         if (existing == null)
         {
             return;
         }
 
         _context.MenuItems.Remove(existing);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
     }
 }

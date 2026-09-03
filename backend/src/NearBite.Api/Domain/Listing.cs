@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
+﻿using NearBite.Api.Domain.Enums;
 
 namespace NearBite.Api.Domain;
 
@@ -17,6 +17,12 @@ public class Listing
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // Navigation property — a Listing has many MenuItems
+    // NEW in Sprint 5
+    public SubmissionStatus SubmissionStatus { get; set; } = SubmissionStatus.Pending;
+    public string? RejectionReason { get; set; }
+    public int? OwnerId { get; set; }
+
+    // Navigation properties
     public ICollection<MenuItem> MenuItems { get; set; } = new List<MenuItem>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
 }

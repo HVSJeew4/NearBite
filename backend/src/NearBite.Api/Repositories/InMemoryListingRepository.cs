@@ -1,4 +1,5 @@
 ﻿using NearBite.Api.Domain;
+using NearBite.Api.Dtos;
 
 namespace NearBite.Api.Repositories;
 
@@ -11,6 +12,7 @@ public class InMemoryListingRepository : IListingRepository
 
     public InMemoryListingRepository()
     {
+        // Same seed data as before — keeping the constructor for tests in Sprint 8
         _listings = new List<Listing>
         {
             new Listing { Id = 1, Name = "Fort Cafe",        Description = "Cozy cafe near the beach",   Cuisine = "Sri Lankan", PriceRange = 2, City = "Negombo", LiveStatus = "Open",   Latitude = 7.2094, Longitude = 79.8358, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
@@ -22,28 +24,19 @@ public class InMemoryListingRepository : IListingRepository
 
         _menuItems = new List<MenuItem>
         {
-            // Fort Cafe (Listing 1)
             new MenuItem { Id = 1, ListingId = 1, Name = "English Breakfast",    Price = 950,  IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 2, ListingId = 1, Name = "Avocado Toast",        Price = 750,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 3, ListingId = 1, Name = "Cold Coffee",          Price = 450,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-
-            // Green Leaf Kottu (Listing 2)
             new MenuItem { Id = 4, ListingId = 2, Name = "Chicken Kottu",        Price = 650,  IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 5, ListingId = 2, Name = "Cheese Kottu",         Price = 750,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 6, ListingId = 2, Name = "Egg Kottu",            Price = 550,  IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 7, ListingId = 2, Name = "Vegetable Kottu",      Price = 500,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-
-            // Sunset Hoppers (Listing 3)
             new MenuItem { Id = 8,  ListingId = 3, Name = "Plain Hopper",        Price = 60,   IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 9,  ListingId = 3, Name = "Egg Hopper",          Price = 90,   IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 10, ListingId = 3, Name = "String Hopper Plate", Price = 250,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-
-            // The Curry House (Listing 4)
             new MenuItem { Id = 11, ListingId = 4, Name = "Rice and Curry",      Price = 500,  IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 12, ListingId = 4, Name = "Veg Rice and Curry",  Price = 400,  IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 13, ListingId = 4, Name = "Fish Curry",          Price = 650,  IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-
-            // Bella Italia (Listing 5)
             new MenuItem { Id = 14, ListingId = 5, Name = "Margherita Pizza",    Price = 1200, IsVeg = true,  CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 15, ListingId = 5, Name = "Pepperoni Pizza",     Price = 1500, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
             new MenuItem { Id = 16, ListingId = 5, Name = "Spaghetti Carbonara", Price = 1100, IsVeg = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
@@ -57,30 +50,56 @@ public class InMemoryListingRepository : IListingRepository
     // Listing methods
     // -----------------------------
 
-    public IEnumerable<Listing> GetAll()
+    public Task<IEnumerable<Listing>> GetAllAsync()
     {
-        return _listings;
+        return Task.FromResult<IEnumerable<Listing>>(_listings);
     }
 
-    public Listing? GetById(int id)
+    public Task<IEnumerable<Listing>> GetAllAsync(ListingFilterDto filter)
     {
-        return _listings.FirstOrDefault(l => l.Id == id);
+        // In-memory version keeps the sync-style loop; wraps in Task.FromResult.
+        // (Only used for tests in Sprint 8; production uses EfListingRepository.)
+        IEnumerable<Listing> results = _listings;
+
+        if (filter.Cuisine != null)
+            results = results.Where(l => l.Cuisine.Equals(filter.Cuisine, StringComparison.OrdinalIgnoreCase));
+        if (filter.MaxPrice != null)
+            results = results.Where(l => l.PriceRange <= filter.MaxPrice.Value);
+        if (filter.IsVeg != null)
+            results = results.Where(l => l.IsVeg == filter.IsVeg.Value);
+        if (filter.Search != null)
+            results = results.Where(l => l.Name.Contains(filter.Search, StringComparison.OrdinalIgnoreCase));
+
+        results = filter.SortBy switch
+        {
+            "price" => results.OrderBy(l => l.PriceRange),
+            "name" or null or "" => results.OrderBy(l => l.Name, StringComparer.OrdinalIgnoreCase),
+            _ => results
+        };
+
+        return Task.FromResult<IEnumerable<Listing>>(results.ToList());
     }
 
-    public void Add(Listing listing)
+    public Task<Listing?> GetByIdAsync(int id)
+    {
+        return Task.FromResult(_listings.FirstOrDefault(l => l.Id == id));
+    }
+
+    public Task AddAsync(Listing listing)
     {
         listing.Id = _nextListingId++;
         listing.CreatedAt = DateTime.UtcNow;
         listing.UpdatedAt = DateTime.UtcNow;
         _listings.Add(listing);
+        return Task.CompletedTask;
     }
 
-    public void Update(Listing listing)
+    public Task UpdateAsync(Listing listing)
     {
         var existing = _listings.FirstOrDefault(l => l.Id == listing.Id);
         if (existing == null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         existing.Name = listing.Name;
@@ -93,56 +112,58 @@ public class InMemoryListingRepository : IListingRepository
         existing.Longitude = listing.Longitude;
         existing.IsVeg = listing.IsVeg;
         existing.UpdatedAt = DateTime.UtcNow;
+
+        return Task.CompletedTask;
     }
 
-    public void Delete(int id)
+    public Task DeleteAsync(int id)
     {
         var existing = _listings.FirstOrDefault(l => l.Id == id);
         if (existing == null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _listings.Remove(existing);
         _menuItems.RemoveAll(m => m.ListingId == id);
+        return Task.CompletedTask;
     }
 
     // -----------------------------
     // Menu item methods
     // -----------------------------
 
-    public IEnumerable<MenuItem> GetMenuItemsForListing(int listingId)
+    public Task<IEnumerable<MenuItem>> GetMenuItemsForListingAsync(int listingId)
     {
-        var result = new List<MenuItem>();
-        foreach (var item in _menuItems)
-        {
-            if (item.ListingId == listingId)
-            {
-                result.Add(item);
-            }
-        }
-        return result;
+        IEnumerable<MenuItem> results = _menuItems.Where(m => m.ListingId == listingId).ToList();
+        return Task.FromResult(results);
     }
 
-    public MenuItem? GetMenuItemById(int menuItemId)
+    public Task<Listing?> GetListingForMenuItemAsync(int listingId)
     {
-        return _menuItems.FirstOrDefault(m => m.Id == menuItemId);
+        return Task.FromResult(_listings.FirstOrDefault(l => l.Id == listingId));
     }
 
-    public void AddMenuItem(MenuItem menuItem)
+    public Task<MenuItem?> GetMenuItemByIdAsync(int menuItemId)
+    {
+        return Task.FromResult(_menuItems.FirstOrDefault(m => m.Id == menuItemId));
+    }
+
+    public Task AddMenuItemAsync(MenuItem menuItem)
     {
         menuItem.Id = _nextMenuItemId++;
         menuItem.CreatedAt = DateTime.UtcNow;
         menuItem.UpdatedAt = DateTime.UtcNow;
         _menuItems.Add(menuItem);
+        return Task.CompletedTask;
     }
 
-    public void UpdateMenuItem(MenuItem menuItem)
+    public Task UpdateMenuItemAsync(MenuItem menuItem)
     {
         var existing = _menuItems.FirstOrDefault(m => m.Id == menuItem.Id);
         if (existing == null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         existing.Name = menuItem.Name;
@@ -150,16 +171,19 @@ public class InMemoryListingRepository : IListingRepository
         existing.IsVeg = menuItem.IsVeg;
         existing.PhotoUrl = menuItem.PhotoUrl;
         existing.UpdatedAt = DateTime.UtcNow;
+
+        return Task.CompletedTask;
     }
 
-    public void DeleteMenuItem(int menuItemId)
+    public Task DeleteMenuItemAsync(int menuItemId)
     {
         var existing = _menuItems.FirstOrDefault(m => m.Id == menuItemId);
         if (existing == null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _menuItems.Remove(existing);
+        return Task.CompletedTask;
     }
 }

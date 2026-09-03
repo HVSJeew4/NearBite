@@ -16,9 +16,9 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public ActionResult<MenuItemDto> GetById(int id)
+    public async Task<ActionResult<MenuItemDto>> GetById(int id)
     {
-        var item = _service.GetMenuItemById(id);
+        var item = await _service.GetMenuItemByIdAsync(id);
 
         if (item == null)
         {
@@ -29,9 +29,9 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public IActionResult Update(int id, UpdateMenuItemDto dto)
+    public async Task<IActionResult> Update(int id, UpdateMenuItemDto dto)
     {
-        var updated = _service.UpdateMenuItem(id, dto);
+        var updated = await _service.UpdateMenuItemAsync(id, dto);
 
         if (updated == null)
         {
@@ -42,9 +42,9 @@ public class MenuItemsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var deleted = _service.DeleteMenuItem(id);
+        var deleted = await _service.DeleteMenuItemAsync(id);
 
         if (!deleted)
         {

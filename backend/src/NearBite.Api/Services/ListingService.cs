@@ -17,87 +17,51 @@ public class ListingService : IListingService
     // Listing methods
     // -----------------------------
 
-    public IEnumerable<ListingDto> GetAll()
+    public async Task<IEnumerable<ListingDto>> GetAllAsync()
     {
-        var listings = _repository.GetAll();
+        var listings = await _repository.GetAllAsync();
         return listings.Select(MapToDto);
     }
 
-    public IEnumerable<ListingDto> GetAll(ListingFilterDto filter)
+    public async Task<IEnumerable<ListingDto>> GetAllAsync(ListingFilterDto filter)
     {
+        // Cross-property validation the service is responsible for.
         if (filter.SortBy == "distance" && (filter.UserLat == null || filter.UserLng == null))
         {
             throw new ArgumentException("sortBy=distance requires both userLat and userLng.");
         }
-
-        var listings = _repository.GetAll();
-        var results = new List<Listing>();
-
-        foreach (var listing in listings)
+        if (filter.SortBy == "rating")
         {
-            if (filter.Cuisine != null &&
-                !listing.Cuisine.Equals(filter.Cuisine, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (filter.MaxPrice != null && listing.PriceRange > filter.MaxPrice.Value)
-            {
-                continue;
-            }
-
-            if (filter.IsVeg != null && listing.IsVeg != filter.IsVeg.Value)
-            {
-                continue;
-            }
-
-            if (filter.Search != null &&
-                !listing.Name.Contains(filter.Search, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            results.Add(listing);
+            throw new ArgumentException("sortBy=rating is not supported until reviews are added in Sprint 5.");
+        }
+        if (filter.SortBy != null && filter.SortBy != "" &&
+            filter.SortBy != "name" && filter.SortBy != "price" && filter.SortBy != "distance")
+        {
+            throw new ArgumentException($"Unknown sortBy value: {filter.SortBy}");
         }
 
-        switch (filter.SortBy)
+        // Fetch filtered results from repository. If sorting by distance, we get
+        // an unsorted result set from the DB and do the sort in memory (Haversine
+        // isn't easily translatable to SQL without PostGIS).
+        var listings = (await _repository.GetAllAsync(filter)).ToList();
+
+        if (filter.SortBy == "distance")
         {
-            case "price":
-                results.Sort((a, b) => a.PriceRange.CompareTo(b.PriceRange));
-                break;
-
-            case "distance":
-                results.Sort((a, b) =>
-                {
-                    var distA = CalculateDistance(filter.UserLat!.Value, filter.UserLng!.Value, a.Latitude, a.Longitude);
-                    var distB = CalculateDistance(filter.UserLat!.Value, filter.UserLng!.Value, b.Latitude, b.Longitude);
-                    return distA.CompareTo(distB);
-                });
-                break;
-
-            case "rating":
-                throw new ArgumentException("sortBy=rating is not supported until reviews are added in Sprint 5.");
-
-            case null:
-            case "":
-            case "name":
-                results.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-                break;
-
-            default:
-                throw new ArgumentException($"Unknown sortBy value: {filter.SortBy}");
+            listings = listings
+                .OrderBy(l => CalculateDistance(filter.UserLat!.Value, filter.UserLng!.Value, l.Latitude, l.Longitude))
+                .ToList();
         }
 
-        return results.Select(MapToDto);
+        return listings.Select(MapToDto);
     }
 
-    public ListingDto? GetById(int id)
+    public async Task<ListingDto?> GetByIdAsync(int id)
     {
-        var listing = _repository.GetById(id);
+        var listing = await _repository.GetByIdAsync(id);
         return listing == null ? null : MapToDto(listing);
     }
 
-    public ListingDto Create(CreateListingDto dto)
+    public async Task<ListingDto> CreateAsync(CreateListingDto dto)
     {
         var listing = new Listing
         {
@@ -112,14 +76,14 @@ public class ListingService : IListingService
             LiveStatus = "Closed"
         };
 
-        _repository.Add(listing);
+        await _repository.AddAsync(listing);
 
         return MapToDto(listing);
     }
 
-    public ListingDto? Update(int id, UpdateListingDto dto)
+    public async Task<ListingDto?> UpdateAsync(int id, UpdateListingDto dto)
     {
-        var existing = _repository.GetById(id);
+        var existing = await _repository.GetByIdAsync(id);
         if (existing == null)
         {
             return null;
@@ -134,20 +98,20 @@ public class ListingService : IListingService
         existing.IsVeg = dto.IsVeg;
         existing.LiveStatus = dto.LiveStatus;
 
-        _repository.Update(existing);
+        await _repository.UpdateAsync(existing);
 
         return MapToDto(existing);
     }
 
-    public bool Delete(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        var existing = _repository.GetById(id);
+        var existing = await _repository.GetByIdAsync(id);
         if (existing == null)
         {
             return false;
         }
 
-        _repository.Delete(id);
+        await _repository.DeleteAsync(id);
         return true;
     }
 
@@ -155,27 +119,27 @@ public class ListingService : IListingService
     // Menu item methods
     // -----------------------------
 
-    public IEnumerable<MenuItemDto>? GetMenuItemsForListing(int listingId)
+    public async Task<IEnumerable<MenuItemDto>?> GetMenuItemsForListingAsync(int listingId)
     {
-        var listing = _repository.GetById(listingId);
+        var listing = await _repository.GetListingForMenuItemAsync(listingId);
         if (listing == null)
         {
             return null;
         }
 
-        var items = _repository.GetMenuItemsForListing(listingId);
+        var items = await _repository.GetMenuItemsForListingAsync(listingId);
         return items.Select(MapMenuItemToDto);
     }
 
-    public MenuItemDto? GetMenuItemById(int menuItemId)
+    public async Task<MenuItemDto?> GetMenuItemByIdAsync(int menuItemId)
     {
-        var item = _repository.GetMenuItemById(menuItemId);
+        var item = await _repository.GetMenuItemByIdAsync(menuItemId);
         return item == null ? null : MapMenuItemToDto(item);
     }
 
-    public MenuItemDto? CreateMenuItem(int listingId, CreateMenuItemDto dto)
+    public async Task<MenuItemDto?> CreateMenuItemAsync(int listingId, CreateMenuItemDto dto)
     {
-        var listing = _repository.GetById(listingId);
+        var listing = await _repository.GetListingForMenuItemAsync(listingId);
         if (listing == null)
         {
             return null;
@@ -190,14 +154,14 @@ public class ListingService : IListingService
             PhotoUrl = dto.PhotoUrl
         };
 
-        _repository.AddMenuItem(menuItem);
+        await _repository.AddMenuItemAsync(menuItem);
 
         return MapMenuItemToDto(menuItem);
     }
 
-    public MenuItemDto? UpdateMenuItem(int menuItemId, UpdateMenuItemDto dto)
+    public async Task<MenuItemDto?> UpdateMenuItemAsync(int menuItemId, UpdateMenuItemDto dto)
     {
-        var existing = _repository.GetMenuItemById(menuItemId);
+        var existing = await _repository.GetMenuItemByIdAsync(menuItemId);
         if (existing == null)
         {
             return null;
@@ -208,20 +172,20 @@ public class ListingService : IListingService
         existing.IsVeg = dto.IsVeg;
         existing.PhotoUrl = dto.PhotoUrl;
 
-        _repository.UpdateMenuItem(existing);
+        await _repository.UpdateMenuItemAsync(existing);
 
         return MapMenuItemToDto(existing);
     }
 
-    public bool DeleteMenuItem(int menuItemId)
+    public async Task<bool> DeleteMenuItemAsync(int menuItemId)
     {
-        var existing = _repository.GetMenuItemById(menuItemId);
+        var existing = await _repository.GetMenuItemByIdAsync(menuItemId);
         if (existing == null)
         {
             return false;
         }
 
-        _repository.DeleteMenuItem(menuItemId);
+        await _repository.DeleteMenuItemAsync(menuItemId);
         return true;
     }
 
@@ -260,7 +224,7 @@ public class ListingService : IListingService
     }
 
     // -----------------------------
-    // Distance calculation (Haversine)
+    // Distance calculation (Haversine) — still needed for sortBy=distance
     // -----------------------------
 
     private static double CalculateDistance(double lat1, double lng1, double lat2, double lng2)

@@ -1,20 +1,23 @@
 ﻿using NearBite.Api.Domain;
+using NearBite.Api.Dtos;
 
 namespace NearBite.Api.Repositories;
 
 public interface IListingRepository
 {
     // Listings
-    IEnumerable<Listing> GetAll();
-    Listing? GetById(int id);
-    void Add(Listing listing);
-    void Update(Listing listing);
-    void Delete(int id);
+    Task<IEnumerable<Listing>> GetAllAsync();
+    Task<IEnumerable<Listing>> GetAllAsync(ListingFilterDto filter);
+    Task<Listing?> GetByIdAsync(int id);
+    Task AddAsync(Listing listing);
+    Task UpdateAsync(Listing listing);
+    Task DeleteAsync(int id);
 
     // Menu items
-    IEnumerable<MenuItem> GetMenuItemsForListing(int listingId);
-    MenuItem? GetMenuItemById(int menuItemId);
-    void AddMenuItem(MenuItem menuItem);
-    void UpdateMenuItem(MenuItem menuItem);
-    void DeleteMenuItem(int menuItemId);
+    Task<IEnumerable<MenuItem>> GetMenuItemsForListingAsync(int listingId);
+    Task<Listing?> GetListingForMenuItemAsync(int listingId);
+    Task<MenuItem?> GetMenuItemByIdAsync(int menuItemId);
+    Task AddMenuItemAsync(MenuItem menuItem);
+    Task UpdateMenuItemAsync(MenuItem menuItem);
+    Task DeleteMenuItemAsync(int menuItemId);
 }

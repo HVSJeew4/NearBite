@@ -16,7 +16,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register application services (DI)
-builder.Services.AddSingleton<IListingRepository, InMemoryListingRepository>();
+builder.Services.AddScoped<IListingRepository, EfListingRepository>();
 builder.Services.AddScoped<IListingService, ListingService>();
 
 var app = builder.Build();
@@ -31,4 +31,17 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+// Seed the database on first run (dev only)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+
+    if (!db.Listings.Any())
+    {
+        // (seed block from Step 3 — leave as is)
+    }
+}
+
 app.Run();

@@ -16,11 +16,11 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ListingDto>> GetAll([FromQuery] ListingFilterDto filter)
+    public async Task<ActionResult<IEnumerable<ListingDto>>> GetAll([FromQuery] ListingFilterDto filter)
     {
         try
         {
-            var listings = _service.GetAll(filter);
+            var listings = await _service.GetAllAsync(filter);
             return Ok(listings);
         }
         catch (ArgumentException ex)
@@ -30,9 +30,9 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public ActionResult<ListingDto> GetById(int id)
+    public async Task<ActionResult<ListingDto>> GetById(int id)
     {
-        var listing = _service.GetById(id);
+        var listing = await _service.GetByIdAsync(id);
 
         if (listing == null)
         {
@@ -43,16 +43,16 @@ public class ListingsController : ControllerBase
     }
 
     [HttpPost]
-    public ActionResult<ListingDto> Create(CreateListingDto dto)
+    public async Task<ActionResult<ListingDto>> Create(CreateListingDto dto)
     {
-        var created = _service.Create(dto);
+        var created = await _service.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public IActionResult Update(int id, UpdateListingDto dto)
+    public async Task<IActionResult> Update(int id, UpdateListingDto dto)
     {
-        var updated = _service.Update(id, dto);
+        var updated = await _service.UpdateAsync(id, dto);
 
         if (updated == null)
         {
@@ -63,9 +63,9 @@ public class ListingsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var deleted = _service.Delete(id);
+        var deleted = await _service.DeleteAsync(id);
 
         if (!deleted)
         {
@@ -80,9 +80,9 @@ public class ListingsController : ControllerBase
     // -----------------------------
 
     [HttpGet("{listingId:int}/menu-items")]
-    public ActionResult<IEnumerable<MenuItemDto>> GetMenuItemsForListing(int listingId)
+    public async Task<ActionResult<IEnumerable<MenuItemDto>>> GetMenuItemsForListing(int listingId)
     {
-        var items = _service.GetMenuItemsForListing(listingId);
+        var items = await _service.GetMenuItemsForListingAsync(listingId);
 
         if (items == null)
         {
@@ -93,9 +93,9 @@ public class ListingsController : ControllerBase
     }
 
     [HttpPost("{listingId:int}/menu-items")]
-    public ActionResult<MenuItemDto> CreateMenuItem(int listingId, CreateMenuItemDto dto)
+    public async Task<ActionResult<MenuItemDto>> CreateMenuItem(int listingId, CreateMenuItemDto dto)
     {
-        var created = _service.CreateMenuItem(listingId, dto);
+        var created = await _service.CreateMenuItemAsync(listingId, dto);
 
         if (created == null)
         {
